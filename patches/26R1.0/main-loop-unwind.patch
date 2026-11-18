@@ -1,0 +1,36 @@
+diff --git a/source/sdl/main.cpp b/source/sdl/main.cpp
+index 667bb01..c6dcbaf 100644
+--- a/source/sdl/main.cpp
++++ b/source/sdl/main.cpp
+@@ -39,7 +39,12 @@ void writeSource();
+ #endif
+ 
+ int boxedmain(int argc, const char **argv) {
++#ifdef __EMSCRIPTEN__
++    // Must outlive emscripten_set_main_loop's stack unwind (see StartUpArgs::apply).
++    static StartUpArgs startupArgs;
++#else
+     StartUpArgs startupArgs;                  
++#endif
+ 
+     klog("Starting ...");
+ #if defined(__MACH__)
+diff --git a/source/sdl/startupArgs.cpp b/source/sdl/startupArgs.cpp
+index e64e39a..7d9ae3a 100644
+--- a/source/sdl/startupArgs.cpp
++++ b/source/sdl/startupArgs.cpp
+@@ -352,7 +352,14 @@ bool StartUpArgs::apply() {
+         klog_fmt("Resolution set to: %dx%d", this->screenCx, this->screenCy);
+     }
+ #ifdef BOXEDWINE_ZLIB
++#ifdef __EMSCRIPTEN__
++    // doMainLoop() never returns on the web: emscripten_set_main_loop(..., 1) unwinds the
++    // C++ stack. Built with -fwasm-exceptions that unwind runs destructors, which freed the
++    // zips while their files were still in use (null mutex in FsZipOpenNode::readNative).
++    static std::vector<std::shared_ptr<FsZip>> openZips;
++#else
+     std::vector<std::shared_ptr<FsZip>> openZips;
++#endif
+     for (auto& zip : zips) {
+         U64 startTime = KSystem::getMicroCounter();
+         std::shared_ptr<FsZip> fsZip = std::make_shared<FsZip>();

@@ -1,0 +1,86 @@
+diff --git a/source/io/fsopennode.cpp b/source/io/fsopennode.cpp
+index bbd6e57..e2dd3d9 100644
+--- a/source/io/fsopennode.cpp
++++ b/source/io/fsopennode.cpp
+@@ -18,6 +18,73 @@
+ 
+ #include "boxedwine.h"
+ 
++#include <sys/stat.h>
++#include <set>
++#include <string>
++#include <unordered_map>
++
++// A directory's host (native) entries are read only once, by FsNode::loadChildren, so a
++// file put into the writable root while Boxedwine runs (e.g. a sketch the web page imports
++// into Documents) never appeared in listings. Before a listing is built, add any host
++// entries the directory doesn't know yet. Only additions: entries Boxedwine already has
++// are left alone. The host directory's mtime is remembered, so an unchanged directory
++// isn't rescanned on every open.
++static BOXEDWINE_MUTEX hostDirMtimeMutex;
++static std::unordered_map<U32, S64> hostDirMtime;
++
++static void addNewHostEntries(const std::shared_ptr<FsNode>& dir) {
++    if (!dir->isDirectory() || !dir->nativePath.length()) {
++        return;
++    }
++    struct stat st;
++    if (stat(dir->nativePath.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
++        return;
++    }
++#if defined(__EMSCRIPTEN__) || defined(__linux__)
++    S64 mtime = (S64)st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec;
++#else
++    S64 mtime = (S64)st.st_mtime;
++#endif
++    {
++        BOXEDWINE_CRITICAL_SECTION_WITH_MUTEX(hostDirMtimeMutex);
++        auto it = hostDirMtime.find(dir->id);
++        if (it != hostDirMtime.end() && it->second == mtime) {
++            return;
++        }
++        hostDirMtime[dir->id] = mtime;
++    }
++    std::vector<std::shared_ptr<FsNode> > children;
++    dir->getAllChildren(children); // the first call also loads the host entries
++    std::set<std::string> known;
++    for (auto& child : children) {
++        if (child) {
++            known.insert(child->name.c_str());
++        }
++    }
++    std::vector<Platform::ListNodeResult> results;
++    Platform::listNodes(dir->nativePath, results);
++    for (auto& n : results) {
++        BString remotePath = dir->nativePath.stringByApppendingPath(n.name);
++        BString name = n.name;
++        Fs::remoteNameToLocal(name);
++        if (name.endsWith(EXT_LINK) || name.endsWith(EXT_DOSATTRIB)) {
++            continue; // links and DOS attributes need loadChildren's handling; leave them
++        }
++        if (name.endsWith(EXT_MIXED)) {
++            name.remove(name.length() - 6);
++        }
++        if (known.count(name.c_str())) {
++            continue;
++        }
++        BString localPath = dir->path;
++        if (!localPath.endsWith("/")) {
++            localPath += "/";
++        }
++        localPath += name;
++        Fs::addFileNode(localPath, B(""), remotePath, n.isDirectory, dir);
++    }
++}
++
+ FsOpenNode::FsOpenNode(std::shared_ptr<FsNode> node, U32 flags) : node(node), flags(flags), listNode(this) {
+     node->addOpenNode(&this->listNode);
+ }
+@@ -70,6 +137,7 @@ U32 FsOpenNode::write(KThread* thread, U32 address, U32 len) {
+ void FsOpenNode::loadDirEntries() {
+     BOXEDWINE_CRITICAL_SECTION;
+     if (this->dirEntries.size()==0 && this->node) {
++        addNewHostEntries(this->node);
+         this->dirEntries.reserve(2 + node->getChildCount());
+         this->dirEntries.push_back(this->node);
+         std::shared_ptr<FsNode> parent = this->node->getParent().lock();

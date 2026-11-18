@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Geometer's Sketchpad in Browser</title>
+<link rel="icon" href="data:,">
+<script src="coi-serviceworker.js"></script>
+<style>
+body { font-family: system-ui, sans-serif; margin: 16px; }
+#canvas { display: block; background: #000; outline: none; }
+#files { margin: 8px 0; }
+#files button, #files label { margin-right: 8px; }
+#docs { margin: 6px 0; padding-left: 20px; }
+.hint { color: #555; max-width: 1024px; }
+</style>
+</head>
+<body>
+<h1>The Geometer's Sketchpad in Browser</h1>
+<p id="status">Loading...</p>
+<canvas id="canvas" width="1024" height="768" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<div id="files">
+<label><input type="file" id="import" multiple hidden><button type="button" onclick="document.getElementById('import').click()">Import sketches...</button></label>
+<button type="button" id="refresh">List Documents</button>
+<span id="filesStatus"></span>
+<ul id="docs"></ul>
+</div>
+<p class="hint">Imported files go to <code>Documents</code> (File &gt; Open shows them). Save sketches to <code>Documents</code> to download them here.
+Everything you save stays in this browser (IndexedDB). You can also drop files onto the page.
+URL options: <code>?resolution=1280x800</code>, <code>?sound=false</code>.</p>
+<p class="hint">The first start takes a while: about 100 MB to download, then Wine sets up.</p>
+<h3>Credit:</h3>
+<ul>
+<li><a href="https://gsptest.scratchconsortium.com/">The Geometer's Sketchpad</a> 5.11 field-test build, by KCP Technologies / Scratch Consortium (<a href="https://www.sketchpad.com/">sketchpad.com</a>)</li>
+<li><a href="https://github.com/danoon2/Boxedwine">Boxedwine</a> (<a href="license.txt">license</a>) with its <a href="https://www.winehq.org/">Wine</a> 9.0 file system</li>
+<li><a href="https://github.com/gzuidhof/coi-serviceworker">coi-serviceworker</a></li>
+<li>Layout after <a href="https://github.com/wangyenshu/elona-boxedwine-web">elona-boxedwine-web</a></li>
+</ul>
+<script src="shell.js"></script>
+</body>
+</html>
