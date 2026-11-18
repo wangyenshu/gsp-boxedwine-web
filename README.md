@@ -3,7 +3,6 @@
 Runs the Windows field-test release of The Geometer's Sketchpad 5.11
 (<https://gsptest.scratchconsortium.com/>) in a web page on
 [Boxedwine](https://github.com/danoon2/Boxedwine)'s multi-threaded WebAssembly build.
-The layout follows [elona-boxedwine-web](https://github.com/wangyenshu/elona-boxedwine-web).
 
 ```
 ./build.sh                                   # -> dist/
@@ -101,4 +100,4 @@ and SDL2 ports are cloned with git (some networks block GitHub archive downloads
 
 Credits: The Geometer's Sketchpad by KCP Technologies; Boxedwine
 ([GPL-2.0](https://github.com/danoon2/Boxedwine/blob/master/license.txt)); Wine;
-coi-serviceworker (MIT); elona-boxedwine-web for the layout and audio patch.
+coi-serviceworker (MIT).
